@@ -7,6 +7,13 @@ import { useEffect, useCallback, useRef } from "react";
 const fetchedUsers = new Set<string>();
 let isFetching = false;
 
+// 清除获取缓存（供登出时调用）
+export function clearCreditsCache() {
+  fetchedUsers.clear();
+  isFetching = false;
+  console.log("[useCredits] Cache cleared");
+}
+
 export function useUser() {
   const [user, setUser] = useAtom(userAtom);
   const { data: session, status } = useSession();
@@ -26,6 +33,8 @@ export function useUser() {
       // 只在 user.id 实际变化时更新
       if (prevUserIdRef.current !== sessionUserId) {
         prevUserIdRef.current = sessionUserId;
+        // 如果是新用户登录（用户ID变化），清除之前的缓存
+        clearCreditsCache();
         setUser((prev) => ({
           ...prev,
           id: sessionUserId,
@@ -37,6 +46,8 @@ export function useUser() {
       // 只在状态变化时清空用户信息
       if (prevUserIdRef.current !== null) {
         prevUserIdRef.current = null;
+        // 用户登出时清除缓存
+        clearCreditsCache();
         setUser({
           id: null,
           email: null,
