@@ -1,0 +1,94 @@
+# <p align="center"> 🎨 AI 图像创意站 🚀✨</p>
+
+<p align="center">AI图像创意站使用GPT-Image-1生成图片，提供七十多种创意玩法供用户选择体验。</p>
+
+<p align="center"><a href="https://302.ai/product/detail/68" target="blank"><img src="https://file.302.ai/gpt/imgs/github/20250102/72a57c4263944b73bf521830878ae39a.png" /></a></p >
+
+<p align="center"><a href="README_zh.md">中文</a> | <a href="README.md">English</a> | <a href="README_ja.md">日本語</a></p>
+
+![](docs/302_AI_Image_Creative_Station.png)
+
+来自[302.AI](https://302.ai)的[AI 图像创意站](https://302.ai/product/detail/68)的开源版本。你可以直接登录302.AI，零代码零配置使用在线版本。或者对本项目根据自己的需求进行修改，传入302.AI的API KEY，自行部署。
+
+## 界面预览
+AI图像创意站的首页随机展示了多种创意玩法，点击即可体验该玩法。后续还会不断更新更多有趣的玩法哦！      
+![](docs/302_AI_Image_Creative_Station_screenshot_01.png)
+
+除了创意玩法，我们还提供了基础的文生图和风格修改。同时提供完整的历史记录功能,方便随时查看和管理生成记录。
+![](docs/302_AI_Image_Creative_Station_screenshot_02.png)           
+
+以微观世界玩法为例，只需输入内部世界和外部世界的描述，即可生成有趣精美的图片。
+![](docs/302_AI_Image_Creative_Station_screenshot_03.png)        
+
+内部世界为扬州炒饭，外部世界为手表表盘生成的效果。
+![](docs/302_AI_Image_Creative_Station_screenshot_04.png)        
+ 
+## 项目特性
+### 🎨 丰富的创意玩法
+提供70+种创意玩法，满足不同场景的图像生成需求。
+### 🖼️ 基础图像生成
+支持文本生成图像和图像风格修改等基础功能。
+### 🎯 一键体验
+简单直观的界面设计，点击即可体验不同的创意玩法。
+### 📝 历史记录
+完整的历史记录功能，方便查看和管理生成记录。
+### 🌍 多语言支持
+  - 中文界面
+  - English Interface
+  - 日本語インターフェース
+
+## 🚩 未来更新计划
+- [ ] 新增更多创意玩法
+
+
+## 🛠️ 技术栈
+
+- **框架**: Next.js 14
+- **语言**: TypeScript
+- **样式**: TailwindCSS
+- **UI组件**: Radix UI
+- **状态管理**: Jotai
+- **表单处理**: React Hook Form
+- **HTTP客户端**: ky
+- **国际化**: next-intl
+- **主题**: next-themes
+- **代码规范**: ESLint, Prettier
+- **提交规范**: Husky, Commitlint
+
+## 开发&部署
+1. 克隆项目
+```bash
+git clone https://github.com/302ai/302_ai_image_creative_station
+cd 302_ai_image_creative_station
+```
+
+2. 安装依赖
+```bash
+pnpm install
+```
+
+3. 环境配置
+```bash
+cp .env.example .env.local
+```
+根据需要修改 `.env.local` 中的环境变量。
+
+4. 启动开发服务器
+```bash
+pnpm dev
+```
+
+5. 构建生产版本
+```bash
+pnpm build
+pnpm start
+```
+
+## ✨ 302.AI介绍 ✨
+[302.AI](https://302.ai)是一个按需付费的AI应用平台，为用户解决AI用于实践的最后一公里问题。
+1. 🧠 集合了最新最全的AI能力和品牌，包括但不限于语言模型、图像模型、声音模型、视频模型。
+2. 🚀 在基础模型上进行深度应用开发，我们开发真正的AI产品，而不是简单的对话机器人
+3. 💰 零月费，所有功能按需付费，全面开放，做到真正的门槛低，上限高。
+4. 🛠 功能强大的管理后台，面向团队和中小企业，一人管理，多人使用。
+5. 🔗 所有AI能力均提供API接入，所有工具开源可自行定制（进行中）。
+6. 💡 强大的开发团队，每周推出2-3个新应用，产品每日更新。有兴趣加入的开发者也欢迎联系我们
