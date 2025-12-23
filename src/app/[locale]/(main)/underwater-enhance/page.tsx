@@ -25,7 +25,7 @@ export default function UnderwaterEnhancePage() {
   };
 
   const handleProcessingComplete = () => {
-    // 处理完成后可以刷新历史记录
+    // 处理完成后可以刷新我的资产
     setImages([]);
   };
 
@@ -46,7 +46,7 @@ export default function UnderwaterEnhancePage() {
       >
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="upload">批量处理</TabsTrigger>
-          <TabsTrigger value="history">历史记录</TabsTrigger>
+          <TabsTrigger value="history">我的资产</TabsTrigger>
         </TabsList>
 
         <TabsContent value="upload" className="mt-6 space-y-6">

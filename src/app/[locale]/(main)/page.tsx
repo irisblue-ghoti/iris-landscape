@@ -108,7 +108,7 @@ export default function MainPage() {
             )}
           </TabsContent>
 
-          {/* 历史记录页面 */}
+          {/* 我的资产页面 */}
           <TabsContent value="history">
             <EnhancementHistory />
           </TabsContent>

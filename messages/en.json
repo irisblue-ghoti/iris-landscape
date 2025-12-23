@@ -1352,7 +1352,7 @@
     "description": "Professional submarine photography processing tool",
     "tabs": {
       "batch": "Batch Processing",
-      "history": "History"
+      "history": "My Assets"
     },
     "upload": {
       "drag_drop": "Drag and drop photos here, or click to select",
@@ -1372,7 +1372,7 @@
       "overall_progress": "Overall Progress"
     },
     "history": {
-      "title": "History",
+      "title": "My Assets",
       "total": "Total {count} records",
       "no_records": "No processing records",
       "view": "View",

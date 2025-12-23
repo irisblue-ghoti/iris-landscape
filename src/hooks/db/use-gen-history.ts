@@ -1,54 +1,119 @@
 import { createScopedLogger } from "@/utils/logger";
-import { useLiveQuery } from "dexie-react-hooks";
-
-import { db } from "@/db";
-import { History } from "@/db/types";
-import { useCallback } from "react";
-import { AddHistory } from "@/db/types";
+import { useState, useEffect, useCallback } from "react";
+import { History, AddHistory } from "@/db/types";
 
 const logger = createScopedLogger("use-gen-history");
 const PAGE_SIZE = 16;
 
-export const useHistory = (page = 1) => {
-  const offset = (page - 1) * PAGE_SIZE;
+interface HistoryResponse {
+  items: History[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+}
 
-  const history = useLiveQuery(async () => {
-    const [items, total] = await Promise.all([
-      db.history
-        .orderBy("createdAt")
-        .reverse()
-        .offset(offset)
-        .limit(PAGE_SIZE)
-        .toArray(),
-      db.history.count(),
-    ]);
+export const useHistory = (page = 1, type?: string) => {
+  const [history, setHistory] = useState<HistoryResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-    return {
-      items,
-      total,
-      totalPages: 1,
-      currentPage: 1,
-    };
-  }, []);
+  // 获取我的资产
+  const fetchHistory = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ page: page.toString() });
+      if (type) {
+        params.set("type", type);
+      }
 
-  const addHistory = useCallback(async (history: AddHistory) => {
-    const id = crypto.randomUUID();
-    await db.history.add({
-      ...history,
-      id,
-      createdAt: Date.now(),
-    });
-    return id;
-  }, []);
+      const res = await fetch(`/api/history?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data);
+      } else {
+        logger.error("Failed to fetch history");
+      }
+    } catch (error) {
+      logger.error("Error fetching history:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, type]);
 
-  const updateHistory = useCallback((id: string, history: Partial<History>) => {
-    db.history.update(id, history);
-  }, []);
+  // 初始加载和刷新
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
-  const deleteHistory = useCallback((id: string) => {
-    db.history.delete(id);
-  }, []);
+  // 添加我的资产
+  const addHistory = useCallback(
+    async (historyData: AddHistory): Promise<string> => {
+      try {
+        const res = await fetch("/api/history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(historyData),
+        });
 
+        if (res.ok) {
+          const { id } = await res.json();
+          // 刷新列表
+          fetchHistory();
+          return id;
+        } else {
+          throw new Error("Failed to add history");
+        }
+      } catch (error) {
+        logger.error("Error adding history:", error);
+        throw error;
+      }
+    },
+    [fetchHistory]
+  );
+
+  // 更新我的资产
+  const updateHistory = useCallback(
+    async (id: string, historyData: Partial<History>) => {
+      try {
+        const res = await fetch(`/api/history/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(historyData),
+        });
+
+        if (res.ok) {
+          // 刷新列表
+          fetchHistory();
+        } else {
+          logger.error("Failed to update history");
+        }
+      } catch (error) {
+        logger.error("Error updating history:", error);
+      }
+    },
+    [fetchHistory]
+  );
+
+  // 删除我的资产
+  const deleteHistory = useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`/api/history/${id}`, {
+          method: "DELETE",
+        });
+
+        if (res.ok) {
+          // 刷新列表
+          fetchHistory();
+        } else {
+          logger.error("Failed to delete history");
+        }
+      } catch (error) {
+        logger.error("Error deleting history:", error);
+      }
+    },
+    [fetchHistory]
+  );
+
+  // 更新我的资产的图片
   const updateHistoryImage = useCallback(
     async (
       historyId: string,
@@ -60,33 +125,26 @@ export const useHistory = (page = 1) => {
         status: "success" | "failed";
       }
     ) => {
-      await db.history
-        .where("id")
-        .equals(historyId)
-        .modify((history: History) => {
-          history.image = image;
-        });
+      await updateHistory(historyId, { image });
     },
-    []
+    [updateHistory]
   );
 
+  // 更新图片状态
   const updateHistoryImageStatus = useCallback(
     async (
       historyId: string,
       index: number,
       status: "pending" | "success" | "failed"
     ) => {
-      await db.history
-        .where("id")
-        .equals(historyId)
-        .modify((history: History) => {
-          history.image.status = status;
-        });
+      await updateHistory(historyId, {
+        image: { status } as any,
+      });
     },
-    []
+    [updateHistory]
   );
 
-  // 视频相关的操作函数
+  // 添加视频到我的资产
   const addVideoToHistory = useCallback(
     async (
       historyId: string,
@@ -98,19 +156,17 @@ export const useHistory = (page = 1) => {
         sourceImageBase64: string;
       }
     ) => {
-      await db.history
-        .where("id")
-        .equals(historyId)
-        .modify((history: History) => {
-          history.video = {
-            ...videoData,
-            status: "pending" as const,
-          };
-        });
+      await updateHistory(historyId, {
+        video: {
+          ...videoData,
+          status: "pending" as const,
+        },
+      });
     },
-    []
+    [updateHistory]
   );
 
+  // 更新视频状态
   const updateVideoStatus = useCallback(
     async (
       historyId: string,
@@ -118,43 +174,34 @@ export const useHistory = (page = 1) => {
       url?: string,
       coverUrl?: string
     ) => {
-      await db.history
-        .where("id")
-        .equals(historyId)
-        .modify((history: History) => {
-          if (history.video) {
-            history.video.status = status;
-            if (url) {
-              history.video.url = url;
-            }
-            if (coverUrl) {
-              history.video.coverUrl = coverUrl;
-            }
-          }
-        });
+      await updateHistory(historyId, {
+        video: {
+          status,
+          url,
+          coverUrl,
+        } as any,
+      });
     },
-    []
+    [updateHistory]
   );
 
+  // 获取待处理的视频（目前返回空数组，后续可添加 API）
   const getPendingVideos = useCallback(async () => {
-    const pendingVideos = await db.history
-      .filter(
-        (history: any) => history.video && history.video.status === "pending"
-      )
-      .toArray();
-    return pendingVideos;
+    // TODO: 添加获取待处理视频的 API
+    return [];
   }, []);
 
   return {
     history,
+    isLoading,
     addHistory,
     updateHistory,
     deleteHistory,
     updateHistoryImage,
     updateHistoryImageStatus,
-    // 新增的视频相关函数
     addVideoToHistory,
     updateVideoStatus,
     getPendingVideos,
+    refreshHistory: fetchHistory,
   };
 };

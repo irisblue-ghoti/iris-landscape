@@ -1,17 +1,10 @@
 "use client";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Maximize,
-  Camera,
-  Zap,
-  Loader2,
-  Play,
-  Square,
-} from "lucide-react";
+import { Maximize, Camera, Zap, Loader2, Play, Square } from "lucide-react";
 import { useWebRTC } from "../hooks/use-webrtc";
 import { useRTSP } from "../hooks/use-rtsp";
 import { useFrameCapture } from "../hooks/use-frame-capture";
@@ -70,7 +63,7 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
   };
 
   // 断开连接
-  const handleDisconnect = () => {
+  const handleDisconnect = useCallback(() => {
     if (source.protocol === "webrtc") {
       disconnectWebRTC();
     } else {
@@ -79,12 +72,19 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
 
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      videoRef.current.src = "";
     }
 
     stopBurstCapture();
     setIsBurstMode(false);
     onUpdateSource({ status: "disconnected" });
-  };
+  }, [
+    source.protocol,
+    disconnectWebRTC,
+    disconnectRTSP,
+    stopBurstCapture,
+    onUpdateSource,
+  ]);
 
   // 单张截图
   const handleCapture = () => {
@@ -116,10 +116,13 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
       setIsBurstMode(true);
 
       // 自动停止
-      setTimeout(() => {
-        stopBurstCapture();
-        setIsBurstMode(false);
-      }, interval * count * 1000 + 500);
+      setTimeout(
+        () => {
+          stopBurstCapture();
+          setIsBurstMode(false);
+        },
+        interval * count * 1000 + 500
+      );
     }
   };
 
@@ -130,21 +133,53 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
     }
   };
 
-  // 组件卸载时清理
+  // 组件卸载时清理连接
   useEffect(() => {
     return () => {
-      handleDisconnect();
+      // 断开 WebRTC/RTSP 连接
+      disconnectWebRTC();
+      disconnectRTSP();
+      stopBurstCapture();
     };
-  }, []);
+  }, [disconnectWebRTC, disconnectRTSP, stopBurstCapture]);
+
+  // 页面关闭/刷新时清理连接
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      disconnectWebRTC();
+      disconnectRTSP();
+    };
+
+    const handleVisibilityChange = () => {
+      // 当页面不可见时（切换标签页或最小化），可选择断开连接
+      // 如果需要在页面不可见时也保持连接，可以注释掉这段代码
+      if (
+        document.visibilityState === "hidden" &&
+        source.status === "connected"
+      ) {
+        console.log("Page hidden, consider disconnecting stream...");
+        // 可选：断开连接以节省资源
+        // handleDisconnect();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [disconnectWebRTC, disconnectRTSP, source.status]);
 
   const isConnected = source.status === "connected";
   const isConnecting = source.status === "connecting";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {/* 左侧：视频源配置 */}
       <Card className="p-6 lg:col-span-1">
-        <h3 className="text-lg font-semibold mb-4">📝 视频源配置</h3>
+        <h3 className="mb-4 text-lg font-semibold">📝 视频源配置</h3>
 
         <div className="space-y-4">
           <div>
@@ -159,7 +194,7 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
 
           <div>
             <Label>协议</Label>
-            <div className="flex gap-4 mt-2">
+            <div className="mt-2 flex gap-4">
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
@@ -199,7 +234,9 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
             <Label className="mb-3 block">连拍设置</Label>
             <div className="space-y-3">
               <div>
-                <Label className="text-sm text-muted-foreground">间隔（秒）</Label>
+                <Label className="text-sm text-muted-foreground">
+                  间隔（秒）
+                </Label>
                 <Input
                   type="number"
                   min="1"
@@ -218,7 +255,9 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
                 />
               </div>
               <div>
-                <Label className="text-sm text-muted-foreground">数量（张）</Label>
+                <Label className="text-sm text-muted-foreground">
+                  数量（张）
+                </Label>
                 <Input
                   type="number"
                   min="2"
@@ -271,7 +310,7 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
           </div>
 
           {source.errorMessage && (
-            <div className="text-sm text-red-500 bg-red-50 dark:bg-red-950 p-3 rounded-lg">
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-500 dark:bg-red-950">
               {source.errorMessage}
             </div>
           )}
@@ -280,13 +319,13 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
 
       {/* 右侧：视频播放器 */}
       <Card className="p-6 lg:col-span-2">
-        <h3 className="text-lg font-semibold mb-4">🖥️ 实时视频</h3>
+        <h3 className="mb-4 text-lg font-semibold">🖥️ 实时视频</h3>
 
         {/* 视频画面 */}
-        <div className="relative aspect-video bg-slate-900 rounded-lg overflow-hidden mb-4">
+        <div className="relative mb-4 aspect-video overflow-hidden rounded-lg bg-slate-900">
           <video
             ref={videoRef}
-            className="w-full h-full object-contain"
+            className="h-full w-full object-contain"
             autoPlay
             muted
             playsInline
@@ -296,7 +335,7 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
             <div className="absolute inset-0 flex items-center justify-center text-slate-400">
               {isConnecting ? (
                 <div className="text-center">
-                  <Loader2 className="h-12 w-12 animate-spin mx-auto mb-2" />
+                  <Loader2 className="mx-auto mb-2 h-12 w-12 animate-spin" />
                   <p>正在连接...</p>
                 </div>
               ) : (
@@ -307,9 +346,9 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
 
           {/* 状态指示器 */}
           {isConnected && (
-            <div className="absolute top-4 right-4 bg-black/70 rounded-lg px-3 py-2 text-white text-sm space-y-1">
+            <div className="absolute right-4 top-4 space-y-1 rounded-lg bg-black/70 px-3 py-2 text-sm text-white">
               <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
                 <span>已连接</span>
               </div>
               {source.stats && (
@@ -356,7 +395,7 @@ export function VideoPlayer({ source, onUpdateSource, onCaptureFrame }: Props) {
         </div>
 
         {isBurstMode && (
-          <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm">
+          <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm dark:border-yellow-800 dark:bg-yellow-950">
             <p className="font-medium">连拍模式运行中...</p>
             <p className="text-muted-foreground">
               每隔 {source.burstMode?.interval || 2} 秒截取一张，共{" "}

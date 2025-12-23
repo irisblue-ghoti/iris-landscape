@@ -302,7 +302,7 @@ export function useUnderwaterEnhancement() {
       // 上传原始图片到 OBS（使用压缩后的版本）
       const originalImageUrl = await uploadToObs(base64);
 
-      // 添加到历史记录（使用 OBS URL 或 base64）
+      // 添加到我的资产（使用 OBS URL 或 base64）
       historyId = await addHistory({
         rawPrompt: "水下照片增强",
         shouldOptimize: false,
@@ -366,7 +366,7 @@ export function useUnderwaterEnhancement() {
         throw new Error("图像处理返回异常，请重试");
       }
 
-      // 更新历史记录为成功（使用 OBS URL）
+      // 更新我的资产为成功（使用 OBS URL）
       updateHistory(historyId, {
         rawPrompt: "水下照片增强",
         shouldOptimize: false,
@@ -407,7 +407,7 @@ export function useUnderwaterEnhancement() {
     } catch (error) {
       console.error("处理失败:", error);
 
-      // 如果历史记录已创建，更新为失败状态
+      // 如果我的资产已创建，更新为失败状态
       if (historyId !== undefined) {
         try {
           // 获取原始图片的 base64（如果还没转换则转换）
@@ -427,7 +427,7 @@ export function useUnderwaterEnhancement() {
             },
           });
         } catch (updateError) {
-          console.error("更新历史记录失败状态时出错:", updateError);
+          console.error("更新我的资产失败状态时出错:", updateError);
         }
       }
 

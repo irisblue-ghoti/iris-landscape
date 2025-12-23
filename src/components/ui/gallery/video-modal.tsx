@@ -123,7 +123,7 @@ export const VideoModal = ({
 
       const result = await createImageToVideo(videoParams);
 
-      // 视频生成成功，通知父组件添加到历史记录
+      // 视频生成成功，通知父组件添加到我的资产
       if (result.task_id && onVideoGenerated) {
         onVideoGenerated(result.task_id, {
           prompt,

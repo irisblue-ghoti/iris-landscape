@@ -89,26 +89,40 @@ export function useRTSP() {
     []
   );
 
-  const disconnect = useCallback(async () => {
+  const disconnect = useCallback(() => {
+    console.log("=== RTSP DISCONNECT CALLED ===");
+
     // 销毁 HLS 实例
     if (hlsRef.current) {
+      console.log("Destroying HLS instance");
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
     // 停止后端转换
     if (sessionIdRef.current) {
-      try {
-        await fetch("/api/video/rtsp/stop", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: sessionIdRef.current }),
-        });
-        console.log("RTSP stream stopped successfully");
-      } catch (error) {
-        console.error("Failed to stop RTSP stream:", error);
-      }
+      const sessionId = sessionIdRef.current;
       sessionIdRef.current = null;
+
+      console.log("Sending stop request for session:", sessionId);
+
+      // 直接使用 fetch（更可靠，可以确认响应）
+      fetch("/api/video/rtsp/stop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("RTSP stop response:", data);
+        })
+        .catch((error) => {
+          console.error("Failed to stop RTSP stream:", error);
+        });
+
+      console.log("RTSP stream stop request sent for session:", sessionId);
+    } else {
+      console.log("No active session to stop");
     }
   }, []);
 

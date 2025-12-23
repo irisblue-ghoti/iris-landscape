@@ -18,6 +18,7 @@ model User {
 
   creditRecords CreditRecord[]
   dailyCheckIns DailyCheckIn[]
+  histories     History[]
 }
 
 model CreditRecord {
@@ -44,4 +45,38 @@ model DailyCheckIn {
 
   @@unique([userId, date])
   @@index([userId])
+}
+
+model History {
+  id             String   @id @default(cuid())
+  userId         String
+  rawPrompt      String
+  shouldOptimize Boolean  @default(false)
+
+  // 图片相关字段
+  imageUrl       String   // 图片URL（存储在OBS）
+  imagePrompt    String
+  imageModel     String
+  imageStatus    String   // pending, success, failed
+  imageSize      String?  // 1536x1024, 1024x1024, 1024x1536
+  imageType      String?  // underwater-enhancement 等
+
+  // 视频相关字段（可选）
+  videoTaskId    String?
+  videoPrompt    String?
+  videoModel     String?
+  videoDuration  String?
+  videoStatus    String?  // pending, success, failed
+  videoUrl       String?
+  videoCoverUrl  String?
+  videoSourceImage String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, imageType])
+  @@index([createdAt])
 }

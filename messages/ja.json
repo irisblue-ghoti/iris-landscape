@@ -1351,7 +1351,7 @@
     "description": "プロの潜水艦写真処理ツール",
     "tabs": {
       "batch": "一括処理",
-      "history": "履歴"
+      "history": "マイアセット"
     },
     "upload": {
       "drag_drop": "写真をここにドラッグ＆ドロップ、またはクリックして選択",
@@ -1371,7 +1371,7 @@
       "overall_progress": "全体の進捗"
     },
     "history": {
-      "title": "履歴",
+      "title": "マイアセット",
       "total": "合計{count}件のレコード",
       "no_records": "処理記録がありません",
       "view": "表示",

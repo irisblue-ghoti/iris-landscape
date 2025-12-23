@@ -29,7 +29,7 @@
   },
   "history": {
     "loading": "加载中...",
-    "noHistoryTitle": "暂无历史记录",
+    "noHistoryTitle": "暂无我的资产",
     "noHistoryMessage": "您生成的图片将会显示在这里",
     "generateVideo":"生成视频"
   },
@@ -69,7 +69,7 @@
       "description": "输入你想生成的图片描述，一句话就能生成你的创意",
       "more": "更多玩法",
       "placeholder": "输入你想生成的内容 e.g.一只带着魔术帽的企鹅",
-      "history": "历史记录",
+      "history": "我的资产",
       "refresh": "换一下，试试手气吧！"
     }
   },
@@ -1368,7 +1368,7 @@
     "description": "专业的潜艇摄影照片处理工具",
     "tabs": {
       "batch": "批量处理",
-      "history": "历史记录"
+      "history": "我的资产"
     },
     "upload": {
       "drag_drop": "拖拽照片到此处，或点击选择",
@@ -1388,7 +1388,7 @@
       "overall_progress": "整体进度"
     },
     "history": {
-      "title": "历史记录",
+      "title": "我的资产",
       "total": "共 {count} 条记录",
       "no_records": "暂无处理记录",
       "view": "查看",
