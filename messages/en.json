@@ -10,6 +10,7 @@
     "title": "Need to share code"
   },
   "common": {
+    "loading": "Loading...",
     "model": "Model Selection",
     "enterPrompt": "Please enter a prompt",
     "enterDuration": "Please select duration",
@@ -1389,7 +1390,9 @@
       "process_time": "Process time: ",
       "model_used": "Model used: ",
       "clear_filter": "Clear filter",
-      "no_records_for_date": "No records for this date"
+      "no_records_for_date": "No records for this date",
+      "processing": "Processing...",
+      "failed": "Processing failed"
     },
     "success": {
       "processed": "{name} processed successfully",
@@ -1419,6 +1422,53 @@
       "download_failed": "Download failed",
       "expired_title": "Share Expired",
       "expired_message": "This share link has expired. Please contact the sharer to regenerate"
+    }
+  },
+  "user": {
+    "auth": {
+      "title": "User Login",
+      "description": "Login or register with email and password",
+      "email": "Email",
+      "password": "Password",
+      "name": "Username",
+      "email_placeholder": "Enter your email",
+      "password_placeholder": "Enter your password",
+      "name_placeholder": "Enter your username (optional)",
+      "login": "Login",
+      "register": "Register",
+      "switch_to_register": "Don't have an account? Register",
+      "switch_to_login": "Already have an account? Login",
+      "use_account": "Use account login",
+      "use_code": "Use share code login",
+      "login_failed": "Login failed, please check your email and password",
+      "register_success": "Registration successful, please login",
+      "register_failed": "Registration failed",
+      "logout": "Logout",
+      "guest": "Guest"
+    }
+  },
+  "credits": {
+    "balance": "Credit Balance",
+    "insufficient": "Insufficient Credits",
+    "required": "Requires {amount} credits",
+    "checkin": {
+      "title": "Daily Check-in",
+      "description": "Check in daily to earn {amount} credits",
+      "button": "Check In Now",
+      "success": "Check-in successful! Earned {reward} credits",
+      "already": "Already checked in today",
+      "failed": "Check-in failed"
+    },
+    "history": {
+      "title": "Credit History",
+      "type": {
+        "registration": "Registration Bonus",
+        "daily_checkin": "Daily Check-in",
+        "recharge": "Recharge",
+        "consume": "Consumption",
+        "refund": "Refund",
+        "ai_usage": "AI Usage"
+      }
     }
   }
 }

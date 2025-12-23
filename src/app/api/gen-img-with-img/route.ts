@@ -1,23 +1,10 @@
-import { createScopedLogger, generateFluxKontextImage } from "@/utils";
+import { createScopedLogger } from "@/utils";
 import { env } from "@/env";
 import ky from "ky";
-import { APICallError } from "ai";
-import { ErrorToast } from "@/components/ui/errorToast";
-import { generateSeedEditImage } from "@/utils/seed-image";
-import { generateSeedEditV3Image } from "@/utils/seed-image-3.0";
+
 const logger = createScopedLogger("gen-img-with-img");
 
-// Helper function to convert URL to File object
-const urlToFile = async (url: string, filename: string): Promise<File> => {
-  // Fetch the image
-  const response = await fetch(url);
-  const blob = await response.blob();
-
-  // Create File object from blob
-  return new File([blob], filename, { type: blob.type });
-};
-
-// Helper function to convert image URL to base64 (Node.js compatible)
+// Helper function to convert image URL to compatible)
 const urlToBase64 = async (url: string): Promise<string> => {
   const response = await fetch(url);
 
@@ -43,123 +30,170 @@ const urlToBase64 = async (url: string): Promise<string> => {
   return `data:${contentType};base64,${base64}`;
 };
 
-interface DeepLTranslation {
-  detected_source_language?: string;
-  text: string;
-}
-
-interface DeepLResponse {
-  translations: DeepLTranslation[];
-}
-
-// 翻译函数
-async function translateToEnglish(
-  text: string,
-  apiKey: string,
-  sourceLang: "ZH" | "EN"
-): Promise<string> {
-  try {
-    const response = await ky.post(
-      `${env.NEXT_PUBLIC_API_URL}/deepl/v2/translate`,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        json: {
-          text: [text],
-          target_lang: "EN",
-          source_lang: "ZH",
-        },
-      }
-    );
-
-    const result = (await response.json()) as DeepLResponse;
-    logger.info("translation-success", { result });
-
-    if (result.translations && result.translations.length > 0) {
-      return result.translations[0].text;
-    } else {
-      throw new Error("No translations found in response");
-    }
-  } catch (error) {
-    logger.error("Failed to translate text", error);
-    // 如果翻译失败，返回原文
-    return text;
-  }
-}
-
-// 处理base64图像数据
-const getCleanBase64 = (img: string): string => {
-  // 如果是数据URL（以data:开头），提取出base64部分
-  if (img.startsWith("data:")) {
-    return img.split(",")[1];
-  }
-  return img;
-};
-
-// // Helper function to determine image orientation using Sharp
-// const getImageOrientation = async (file: File): Promise<string> => {
-//   try {
-//     // Convert File to Buffer
-//     const arrayBuffer = await file.arrayBuffer();
-//     const buffer = Buffer.from(arrayBuffer);
-
-//     // Get image metadata using Sharp
-//     const metadata = await sharp(buffer).metadata();
-
-//     if (!metadata.width || !metadata.height) {
-//       logger.warn("Could not determine image dimensions, using default size");
-//       return "1024x1024"; // Default to square if dimensions unavailable
-//     }
-
-//     if (metadata.width > metadata.height) {
-//       return "1536x1024"; // Landscape
-//     } else if (metadata.height > metadata.width) {
-//       return "1024x1536"; // Portrait
-//     } else {
-//       return "1024x1024"; // Square
-//     }
-//   } catch (error) {
-//     logger.error("Error in Sharp image processing:", error);
-//     return "1024x1024"; // Default to square on error
-//   }
-// };
-
 export async function POST(request: Request) {
   try {
     const {
-      apiKey,
+      apiKey: clientApiKey,
       img,
       prompt,
-      size = "1024x1024",
-      model = "gpt-image-1",
-      sourceLang = "ZH",
+      model = "gemini-3-pro-image-preview",
+      outputResolution = "2k",
+      aspectRatio = "1:1",
     }: {
       img: string;
       prompt: string;
-      apiKey: string;
-      size: "1024x1024" | "1536x1024" | "1024x1536";
-      model?:
-        | "gpt-image-1"
-        | "flux-kontext-pro"
-        | "flux-kontext-max"
-        | "SeedEdit 3.0"
-        | "gemini-2.5-flash-image-preview"
-        | "gemini-3-pro-image-preview";
-      sourceLang?: "ZH" | "EN";
+      apiKey?: string;
+      model?: "gemini-3-pro-image-preview" | "gemini-3-pro-image-preview-chat";
+      outputResolution?: "1k" | "2k" | "4k";
+      aspectRatio?: string;
     } = await request.json();
 
-    if (model === "gemini-3-pro-image-preview") {
-      try {
+    // 优先使用服务端环境变量中的 API Key，如果没有则使用客户端传来的
+    const apiKey =
+      env.API_KEY_302 || env.NEXT_PUBLIC_302_API_KEY || clientApiKey;
+
+    if (!apiKey) {
+      logger.error("No API key available");
+      return Response.json({ error: "API Key 未配置" }, { status: 401 });
+    }
+
+    logger.info("Using API key", {
+      hasKey: !!apiKey,
+      keySource: env.API_KEY_302
+        ? "server"
+        : env.NEXT_PUBLIC_302_API_KEY
+          ? "public"
+          : "client",
+    });
+
+    try {
+      const imageSizeKB = img ? Math.round((img.length * 0.75) / 1024) : 0;
+
+      logger.info("Image generation request", {
+        model,
+        outputResolution,
+        aspectRatio,
+        hasImage: !!img,
+        imageSizeKB: `${imageSizeKB}KB`,
+        promptLength: prompt?.length || 0,
+      });
+
+      // 检查图片大小，超过 7MB 报错（API 限制）
+      if (imageSizeKB > 7 * 1024) {
+        logger.error("Image too large", { imageSizeKB });
+        return Response.json(
+          {
+            error: {
+              message: "图片文件过大，请上传小于 7MB 的图片",
+              message_cn: "图片文件过大，请上传小于 7MB 的图片",
+              type: "IMAGE_TOO_LARGE",
+            },
+          },
+          { status: 400 }
+        );
+      }
+
+      let base64Image: string;
+
+      if (model === "gemini-3-pro-image-preview-chat") {
+        // 使用 Chat 格式 API（OpenAI兼容格式）
+        // 参考: https://doc.302.ai/380231548e0
+
+        // 根据分辨率获取像素值
+        const resolutionMap: Record<string, string> = {
+          "1k": "1024",
+          "2k": "2048",
+          "4k": "4096",
+        };
+        const resolutionPixels = resolutionMap[outputResolution] || "2048";
+
+        // 构建包含分辨率和比例要求的提示词
+        const enhancedPrompt = `${prompt}需要生成分辨率为 ${resolutionPixels}px，宽高比为 ${aspectRatio} 的图片。`;
+
+        logger.info("Chat API enhanced prompt", { enhancedPrompt });
+
+        const res = await ky.post(
+          `${env.NEXT_PUBLIC_API_URL}/v1/chat/completions`,
+          {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            timeout: 300000,
+            retry: {
+              limit: 2,
+              methods: ["post"],
+              statusCodes: [408, 413, 429, 500, 502, 503, 504],
+              backoffLimit: 5000,
+            },
+            json: {
+              model: "gemini-3-pro-image-preview",
+              temperature: 0.1,
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "image_url",
+                      image_url: {
+                        url: img, // 支持 base64 data URL 或 http URL
+                      },
+                    },
+                    {
+                      type: "text",
+                      text: enhancedPrompt,
+                    },
+                  ],
+                },
+              ],
+            },
+          }
+        );
+
+        const responseData = await res.json<any>();
+        logger.info("Chat API response received", {
+          hasChoices: !!responseData.choices,
+          choicesLength: responseData.choices?.length || 0,
+        });
+
+        // 从 Chat 响应中提取图片
+        // 响应格式: { choices: [{ message: { content: "..." } }] }
+        const content = responseData.choices?.[0]?.message?.content;
+
+        if (!content) {
+          logger.error("No content in Chat API response", responseData);
+          throw new Error("API响应中未找到内容");
+        }
+
+        // Chat 格式返回的图片可能在 content 中作为 markdown 图片链接或直接是 base64
+        // 尝试提取图片 URL
+        const imageUrlMatch = content.match(/!\[.*?\]\((.*?)\)/);
+        if (imageUrlMatch) {
+          base64Image = await urlToBase64(imageUrlMatch[1]);
+        } else if (content.startsWith("data:image")) {
+          base64Image = content;
+        } else {
+          // 如果返回的是纯文本，可能需要从其他字段获取图片
+          logger.error("Unable to extract image from Chat response", {
+            content: content.substring(0, 200),
+          });
+          throw new Error("无法从响应中提取图片");
+        }
+      } else {
+        // 使用 302.AI 简化格式 API（与 v0.0.1 一致）
         const res = await ky.post(
           `${env.NEXT_PUBLIC_API_URL}/302/image/generate`,
           {
             headers: {
               Authorization: `Bearer ${apiKey}`,
             },
-            timeout: false,
+            timeout: 300000, // 5分钟超时
+            retry: {
+              limit: 2,
+              methods: ["post"],
+              statusCodes: [408, 413, 429, 500, 502, 503, 504],
+              backoffLimit: 5000,
+            },
             json: {
               prompt,
               model: "gemini-3-pro-image-preview",
@@ -171,291 +205,96 @@ export async function POST(request: Request) {
         const { image_url } = await res.json<any>();
 
         // 保留完整的 data URL（包含正确的 Content-Type）
-        const base64Image = await urlToBase64(image_url);
-
-        return Response.json({
-          image: {
-            b64_json: base64Image,  // 完整的 data URL，包含正确的 MIME 类型
-            url: "",
-          },
-        });
-      } catch (error) {
-        console.error("Gemini 3 Pro image generation failed:", error);
-        logger.error("Gemini 3 Pro image generation failed", error);
-        return Response.json({ error: "图像生成失败" }, { status: 500 });
-      }
-    }
-
-    if (model === "gemini-2.5-flash-image-preview") {
-      try {
-        const res = await ky.post(
-          `${env.NEXT_PUBLIC_API_URL}/302/image/generate`,
-          {
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-            },
-            timeout: false,
-            json: {
-              prompt,
-              model: "gemini-2.5-flash-image",
-              image: img,
-              // ...(image !== "" ? { image } : {}),
-            },
-          }
-        );
-        const { image_url } = await res.json<any>();
-
-        // 将返回的URL转换为base64 - 保留完整的 data URL
-        const base64Image = await urlToBase64(image_url);
-
-        return Response.json({
-          image: {
-            b64_json: base64Image,  // 返回完整的 data URL
-            url: "",
-          },
-        });
-      } catch (error) {
-        logger.error("SeedEdit v3.0 generation failed", error);
-        return Response.json({ error: "图像编辑失败" }, { status: 500 });
-      }
-    }
-
-    if (model === "SeedEdit 3.0") {
-      try {
-        // 处理输入图像，确保它是base64格式
-        // let imageBase64 = img;
-        // if (img.startsWith("http")) {
-        //   // 如果是URL，转换为base64
-        //   imageBase64 = await urlToBase64(img);
-        // }
-
-        // 获取干净的base64数据（去掉前缀）
-        // const cleanBase64 = getCleanBase64(imageBase64);
-
-        // 使用SeedEdit进行图像编辑
-        const url = await generateSeedEditV3Image(
-          env.NEXT_PUBLIC_API_URL,
-          prompt,
-          apiKey,
-          img
-        );
-
-        // 将返回的URL转换为base64
-        const base64Image = await urlToBase64(url);
-
-        return Response.json({
-          image: {
-            b64_json: base64Image,
-            url: "",
-          },
-        });
-      } catch (error) {
-        logger.error("SeedEdit v3.0 generation failed", error);
-        return Response.json({ error: "图像编辑失败" }, { status: 500 });
-      }
-    }
-
-    if (
-      model.toLowerCase() === "flux-kontext-pro" ||
-      model.toLowerCase() === "flux-kontext-max"
-    ) {
-      try {
-        // 处理输入图像，确保它是base64格式
-        let imageBase64 = img;
-        if (img.startsWith("http")) {
-          // 如果是URL，转换为base64
-          imageBase64 = await urlToBase64(img);
-        }
-
-        // 获取干净的base64数据（去掉前缀）
-        const cleanBase64 = getCleanBase64(imageBase64);
-
-        // 对于Flux Kontext Pro模型，我们需要先翻译提示词，然后使用不同的API
-        const englishPrompt = await translateToEnglish(
-          prompt,
-          apiKey,
-          sourceLang
-        );
-        logger.info("Translated prompt for Flux-Kontext-Pro", {
-          original: prompt,
-          translated: englishPrompt,
-        });
-
-        // 生成图像，传入输入图像
-        const base64Image = await generateFluxKontextImage(
-          env.NEXT_PUBLIC_API_URL,
-          englishPrompt,
-          apiKey,
-          cleanBase64,
-          model as "flux-kontext-pro" | "flux-kontext-max"
-        );
-
-        return Response.json({
-          image: {
-            // Flux Kontext 返回纯 base64，需要添加前缀
-            b64_json: `data:image/png;base64,${base64Image}`,
-            url: "",
-          },
-        });
-      } catch (error) {
-        logger.error("Error with Flux-Kontext-Pro model:", error);
-        throw error;
-      }
-    }
-
-    // 以下是原有的GPT-4o处理流程
-    // Create FormData
-    const formdata = new FormData();
-
-    try {
-      // Create an array to hold both images
-      const imageFiles = [];
-      let originalImageFile;
-
-      // Convert origin image URL to File object
-      if (img && img.startsWith("http")) {
-        const filename = img.split("/").pop() || "image1.jpg";
-        const imageFile = await urlToFile(img, filename);
-        originalImageFile = imageFile;
-        imageFiles.push(imageFile);
-      } else {
-        // Handle case where originImage is already a File or base64
-        originalImageFile = img;
-        imageFiles.push(img);
-      }
-
-      // Append both images to the FormData
-      for (let i = 0; i < imageFiles.length; i++) {
-        formdata.append("image", imageFiles[i]);
-      }
-
-      // Determine image size based on orientation of the first image (original)
-      const imageSize = "1024x1024"; // Default size
-      // if (originalImageFile instanceof File) {
-      //   try {
-      //     imageSize = await getImageOrientation(originalImageFile);
-      //   } catch (error) {
-      //     logger.error("Error determining image orientation:", error);
-      //     // Fall back to default size
-      //   }
-      // }
-
-      // Create a prompt that tells the API to modify the first image based on the second image's style
-
-      formdata.append("prompt", prompt);
-
-      // Add other required parameters
-      formdata.append("model", model);
-      formdata.append("quality", "auto");
-      formdata.append("size", size || imageSize);
-
-      // Call the API
-      const result = await ky
-        .post("https://api.302.ai/v1/images/edits", {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
-          retry: {
-            limit: 1,
-            methods: [
-              "post",
-              "get",
-              "put",
-              "head",
-              "delete",
-              "options",
-              "trace",
-            ], // 明确包含 'post'
-          },
-          body: formdata,
-          timeout: 120000,
-        })
-        .text();
-
-      logger.info("API response received", {
-        result: result.substring(0, 200) + "...",
-      });
-
-      // Parse the response to get the image URL
-      let responseData;
-      try {
-        responseData = JSON.parse(result);
-      } catch (parseError) {
-        logger.error("Failed to parse API response as JSON", {
-          result: result.substring(0, 500),
-          parseError,
-        });
-        throw new Error(
-          `Invalid JSON response from API: ${result.substring(0, 200)}`
-        );
-      }
-      const image = responseData?.data?.[0];
-
-      if (!image) {
-        logger.error("Image URL not found in response", responseData);
-        return Response.json(
-          {
-            error: "Image URL not found in response",
-          },
-          { status: 500 }
-        );
+        base64Image = await urlToBase64(image_url);
       }
 
       return Response.json({
-        image,
+        image: {
+          b64_json: base64Image,
+          url: "",
+        },
       });
-    } catch (apiError: any) {
-      logger.error("API call failed:", apiError);
+    } catch (error: any) {
+      console.error("Image generation failed:", error);
+      logger.error("Image generation failed", error);
 
-      // Check if error has response with error code for ErrorToast
-      if (apiError.response) {
+      // 解析错误类型并返回友好提示
+      let errorMessage = "图像生成失败，请稍后重试";
+      let errorType = "GENERATION_FAILED";
+
+      if (
+        error.message?.includes("fetch failed") ||
+        error.cause?.code === "ECONNRESET" ||
+        error.cause?.code === "UND_ERR_SOCKET"
+      ) {
+        if (
+          error.cause?.message?.includes("other side closed") ||
+          error.cause?.code === "UND_ERR_SOCKET"
+        ) {
+          errorMessage =
+            "连接被服务器关闭，请尝试使用较小的图片（建议小于 2MB）";
+          errorType = "CONNECTION_CLOSED";
+        } else {
+          errorMessage = "网络连接失败，请检查网络后重试";
+          errorType = "NETWORK_ERROR";
+        }
+      } else if (
+        error.message?.includes("timeout") ||
+        error.name === "TimeoutError"
+      ) {
+        errorMessage = "请求超时，图片可能过大或网络较慢，请重试";
+        errorType = "TIMEOUT_ERROR";
+      } else if (error.response) {
         try {
-          const errorText = await apiError.response.text();
-          const errorData = JSON.parse(errorText);
-          if (errorData.error && errorData.error.err_code) {
-            // If we have a structured error with err_code, return it directly
-            return Response.json(errorData, {
-              status: apiError.response.status || 500,
-            });
+          const errorData = await error.response.json();
+          logger.error("API error response details:", errorData);
+          console.error(
+            "API error response details:",
+            JSON.stringify(errorData, null, 2)
+          );
+          if (errorData.error?.message) {
+            errorMessage =
+              errorData.error.message_cn || errorData.error.message;
+          } else if (errorData.message) {
+            errorMessage = errorData.message_cn || errorData.message;
           }
-        } catch (parseError) {
-          // If parsing fails, continue to default error handling
+        } catch {
+          try {
+            const errorText = await error.response.text();
+            logger.error("API error response text:", errorText);
+            console.error("API error response text:", errorText);
+          } catch {
+            // 忽略解析错误
+          }
         }
       }
 
-      throw apiError;
+      return Response.json(
+        {
+          error: {
+            message: errorMessage,
+            message_cn: errorMessage,
+            type: errorType,
+          },
+        },
+        { status: 500 }
+      );
     }
   } catch (error: any) {
-    logger.error("Error in gen-style-reference-image:", error);
-
-    if (error instanceof APICallError) {
-      const resp = error.responseBody;
-      return Response.json(resp, { status: 500 });
-    }
-
-    // Handle different types of errors
-    const errorMessage = "Failed to generate image";
-    const errorCode = 500;
-
-    if (error instanceof Error) {
-      const resp = (error as any)?.responseBody as any;
-      if (resp) {
-        return Response.json(resp, { status: 500 });
-      }
-    }
+    logger.error("Error in gen-img-with-img:", error);
 
     return Response.json(
       {
         error: {
-          err_code: errorCode,
-          message: errorMessage,
+          err_code: 500,
+          message: "Failed to generate image",
           message_cn: "生成图片失败",
           message_en: "Failed to generate image",
           message_ja: "画像の生成に失敗しました",
           type: "IMAGE_GENERATION_ERROR",
         },
       },
-      { status: errorCode }
+      { status: 500 }
     );
   }
 }

@@ -10,6 +10,7 @@
     "title": "需要分享码"
   },
   "common": {
+    "loading": "加载中...",
     "pagination":{
       "previous":"上一页",
       "next":"下一页"
@@ -1405,7 +1406,9 @@
       "process_time": "处理时间：",
       "model_used": "使用模型：",
       "clear_filter": "清除筛选",
-      "no_records_for_date": "该日期没有记录"
+      "no_records_for_date": "该日期没有记录",
+      "processing": "处理中...",
+      "failed": "处理失败"
     },
     "success": {
       "processed": "{name} 处理完成",
@@ -1435,6 +1438,53 @@
       "download_failed": "下载失败",
       "expired_title": "分享已过期",
       "expired_message": "该分享链接已过期，请联系分享者重新生成"
+    }
+  },
+  "user": {
+    "auth": {
+      "title": "用户登录",
+      "description": "使用邮箱密码登录或注册账号",
+      "email": "邮箱",
+      "password": "密码",
+      "name": "用户名",
+      "email_placeholder": "请输入邮箱",
+      "password_placeholder": "请输入密码",
+      "name_placeholder": "请输入用户名（可选）",
+      "login": "登录",
+      "register": "注册",
+      "switch_to_register": "还没有账号？点击注册",
+      "switch_to_login": "已有账号？点击登录",
+      "use_account": "使用账号登录",
+      "use_code": "使用分享码登录",
+      "login_failed": "登录失败，请检查邮箱和密码",
+      "register_success": "注册成功，请登录",
+      "register_failed": "注册失败",
+      "logout": "退出登录",
+      "guest": "访客"
+    }
+  },
+  "credits": {
+    "balance": "积分余额",
+    "insufficient": "积分不足",
+    "required": "需要 {amount} 积分",
+    "checkin": {
+      "title": "每日签到",
+      "description": "每日签到可获得 {amount} 积分",
+      "button": "立即签到",
+      "success": "签到成功！获得 {reward} 积分",
+      "already": "今日已签到",
+      "failed": "签到失败"
+    },
+    "history": {
+      "title": "积分记录",
+      "type": {
+        "registration": "注册奖励",
+        "daily_checkin": "每日签到",
+        "recharge": "充值",
+        "consume": "消费",
+        "refund": "退款",
+        "ai_usage": "AI使用"
+      }
     }
   }
 }

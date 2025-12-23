@@ -16,6 +16,14 @@ export default function UnderwaterEnhancePage() {
     setImages((prev) => [...prev, ...newImages]);
   };
 
+  const handleImageRemoved = (id: string) => {
+    setImages((prev) => prev.filter((img) => img.id !== id));
+  };
+
+  const handleAllImagesCleared = () => {
+    setImages([]);
+  };
+
   const handleProcessingComplete = () => {
     // 处理完成后可以刷新历史记录
     setImages([]);
@@ -27,7 +35,7 @@ export default function UnderwaterEnhancePage() {
         <h1 className="text-3xl font-bold">
           {t("underwater.title") || "水下照片增强"}
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="mt-2 text-muted-foreground">
           {t("underwater.description") || "专业的潜艇摄影照片处理工具"}
         </p>
       </div>
@@ -36,13 +44,17 @@ export default function UnderwaterEnhancePage() {
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as "upload" | "history")}
       >
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="upload">批量处理</TabsTrigger>
           <TabsTrigger value="history">历史记录</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="upload" className="space-y-6 mt-6">
-          <UnderwaterUploader onImagesAdded={handleImagesAdded} />
+        <TabsContent value="upload" className="mt-6 space-y-6">
+          <UnderwaterUploader
+            onImagesAdded={handleImagesAdded}
+            onImageRemoved={handleImageRemoved}
+            onAllImagesCleared={handleAllImagesCleared}
+          />
           {images.length > 0 && (
             <ProcessingQueue
               images={images}

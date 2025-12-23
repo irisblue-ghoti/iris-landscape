@@ -7,9 +7,9 @@ interface GenerateImageParams {
   apiKey: string;
   img?: string;
   prompt?: string;
-  size?: "1024x1024" | "1536x1024" | "1024x1536";
-  model?: string;
-  sourceLang?: string;
+  model?: "gemini-3-pro-image-preview" | "gemini-3-pro-image-preview-chat";
+  outputResolution?: "1k" | "2k" | "4k";
+  aspectRatio?: string;
 }
 
 interface GenerateImageResult {
@@ -19,37 +19,24 @@ interface GenerateImageResult {
   };
 }
 
-// 定义API错误接口
-interface ApiError {
-  err_code: number;
-  message: string;
-  message_cn?: string;
-  message_jp?: string;
-  type: string;
-}
-
 export const genImgWithImg = async ({
   apiKey,
   img,
   prompt,
-  size,
-  model = "gpt-image-1",
-  sourceLang = "ZH",
+  model = "gemini-3-pro-image-preview",
+  outputResolution = "2k",
+  aspectRatio = "1:1",
 }: GenerateImageParams) => {
   try {
     const res = await ky.post("/api/gen-img-with-img", {
       timeout: 300000,
-      // retry: {
-      //   limit: 1,
-      //   methods: ["post", "get", "put", "head", "delete", "options", "trace"], // 明确包含 'post'
-      // },
       json: {
         img,
         prompt,
         apiKey,
-        size,
         model,
-        sourceLang,
+        outputResolution,
+        aspectRatio,
       },
     });
     return res.json<GenerateImageResult>();
@@ -69,7 +56,6 @@ export const genImgWithImg = async ({
               const countryCode = langToCountry(uiLanguage);
               const messageKey =
                 countryCode === "en" ? "message" : `message_${countryCode}`;
-              // 如果这个特定语言的消息不存在，回退到英文
               const message =
                 errorData.error[messageKey] || errorData.error.message;
               emitter.emit("ToastError", {
@@ -84,7 +70,6 @@ export const genImgWithImg = async ({
               const countryCode = langToCountry(uiLanguage);
               const messageKey =
                 countryCode === "en" ? "message" : `message_${countryCode}`;
-              // 如果这个特定语言的消息不存在，回退到英文
               const message =
                 errorResponse[messageKey] || errorResponse.message;
               emitter.emit("ToastError", {
@@ -119,16 +104,10 @@ export const genImgWithImg = async ({
               message: errorText || error.message,
             });
 
-            // 抛出带原始响应文本的错误
             const textError = new Error(errorText || error.message);
             (textError as any).responseText = errorText;
             throw textError;
           } catch {
-            // 如果连文本都无法获取
-            // emitter.emit("ToastError", {
-            //   code: error.response.status,
-            //   message: error.message,
-            // });
             throw error;
           }
         }

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
-import { getObsClient, isObsConfigured, generateShareUrls } from "@/lib/obs-client";
+import {
+  getObsClient,
+  isObsConfigured,
+  generateShareUrls,
+} from "@/lib/obs-client";
 import { env } from "@/env";
 
 // 有效期选项（秒）
@@ -36,7 +40,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const expiresInSeconds = EXPIRES_OPTIONS[expires as ExpiresOption] || EXPIRES_OPTIONS["7d"];
+    const expiresInSeconds =
+      EXPIRES_OPTIONS[expires as ExpiresOption] || EXPIRES_OPTIONS["7d"];
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
 
     // 生成签名 URL
@@ -81,7 +86,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("创建批量分享失败:", error);
     return NextResponse.json(
-      { error: "创建分享失败", message: error instanceof Error ? error.message : "未知错误" },
+      {
+        error: "创建分享失败",
+        message: error instanceof Error ? error.message : "未知错误",
+      },
       { status: 500 }
     );
   }
@@ -104,10 +112,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!isObsConfigured()) {
-      return NextResponse.json(
-        { error: "华为云 OBS 未配置" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "华为云 OBS 未配置" }, { status: 500 });
     }
 
     const client = getObsClient();
@@ -130,17 +135,14 @@ export async function GET(request: NextRequest) {
 
     // 读取数据
     const chunks: Buffer[] = [];
-    for await (const chunk of result.InterfaceResult.Content) {
+    for await (const chunk of result.InterfaceResult!.Content!) {
       chunks.push(Buffer.from(chunk));
     }
     const shareData = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
 
     // 检查是否过期
     if (new Date(shareData.expiresAt) < new Date()) {
-      return NextResponse.json(
-        { error: "分享已过期" },
-        { status: 410 }
-      );
+      return NextResponse.json({ error: "分享已过期" }, { status: 410 });
     }
 
     return NextResponse.json({
@@ -150,7 +152,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("获取分享数据失败:", error);
     return NextResponse.json(
-      { error: "获取分享失败", message: error instanceof Error ? error.message : "未知错误" },
+      {
+        error: "获取分享失败",
+        message: error instanceof Error ? error.message : "未知错误",
+      },
       { status: 500 }
     );
   }

@@ -1,4 +1,4 @@
-import AppAuth from "@/components/global/app-auth";
+import SimpleAuthGuard from "@/components/auth/simple-auth-guard";
 import AppChat from "@/components/global/app-chat";
 import { AppClickMonitor } from "@/components/global/app-click-monitor";
 import AppClient from "@/components/global/app-client";
@@ -6,6 +6,8 @@ import AppFooter from "@/components/global/app-footer";
 import AppHeader from "@/components/global/app-header";
 import AppJotai from "@/components/global/app-jotai";
 import AppMessage from "@/components/global/app-message";
+import AppSession from "@/components/global/app-session";
+import AuthLoadingGuard from "@/components/global/auth-loading-guard";
 import AppTheme from "@/components/global/app-theme";
 import AppTooltip from "@/components/global/app-tooltip";
 import { GLOBAL, SEO_DATA } from "@/constants";
@@ -99,18 +101,22 @@ export default async function RootLayout({
         {/* Force theme to be set on client side, to avoid hydration error on first render */}
         <AppTheme theme={theme}>
           <AppJotai>
-            <NextIntlClientProvider messages={messages}>
-              <AppClient>
-                <AppTooltip>
-                  <AppHeader />
-                  <main className="">{children}</main>
-                </AppTooltip>
-                <AppAuth />
-                <AppChat />
-                <AppClickMonitor />
-              </AppClient>
-              <AppMessage />
-            </NextIntlClientProvider>
+            <AppSession>
+              <AuthLoadingGuard>
+                <NextIntlClientProvider messages={messages}>
+                  <AppClient>
+                    <AppTooltip>
+                      <AppHeader />
+                      <main className="">{children}</main>
+                    </AppTooltip>
+                    <SimpleAuthGuard />
+                    <AppChat />
+                    <AppClickMonitor />
+                  </AppClient>
+                  <AppMessage />
+                </NextIntlClientProvider>
+              </AuthLoadingGuard>
+            </AppSession>
           </AppJotai>
         </AppTheme>
       </body>

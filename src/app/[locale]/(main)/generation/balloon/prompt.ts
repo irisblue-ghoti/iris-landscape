@@ -1,5 +1,0 @@
-export const balloonPrompt = (body: string, backgroundColor: string) => {
-  return `
-Create a ${body} made entirely of twisted latex balloons, with fun, whimsical super details and super realistic 3D rendering. Every part of the body should clearly display the manual balloon modeling process: tight twists, knots, rings, squeezed parts, and geometric shapes of inflated tubes. Balloons should have a smooth, semi transparent surface with visible tension points and subtle stretching. Add small realistic defects, such as pressure dents, seams, or creases at balloon bends or bindings. Use bright and saturated colors to create a playful party atmosphere. Lighting should produce clear glossy highlights and soft shadows to enhance rounded shapes. Place the balloon animal on a clean ${backgroundColor} background. Focusing on sculptural realism, joyful shapes, and stunning effects. The final image should feel like it was created by a pro balloon artist for a high-end cartoon birthday party.
-  `;
-};

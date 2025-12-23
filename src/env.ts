@@ -5,6 +5,8 @@ import { ZodError, z } from "zod";
 export const env = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "production"]), // Ensure NODE_ENV is either 'development' or 'production'
+    // 302 API Key (server-side only for security)
+    API_KEY_302: z.string().optional(),
     // Huawei Cloud OBS Configuration
     HUAWEI_OBS_ACCESS_KEY: z.string().optional(),
     HUAWEI_OBS_SECRET_KEY: z.string().optional(),
@@ -32,6 +34,8 @@ export const env = createEnv({
   // Runtime environment configuration
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
+    // 302 API Key
+    API_KEY_302: process.env.API_KEY_302,
     // Huawei Cloud OBS
     HUAWEI_OBS_ACCESS_KEY: process.env.HUAWEI_OBS_ACCESS_KEY,
     HUAWEI_OBS_SECRET_KEY: process.env.HUAWEI_OBS_SECRET_KEY,

@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  credits   Int      @default(100)  // 注册默认送100积分
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creditRecords CreditRecord[]
+  dailyCheckIns DailyCheckIn[]
+}
+
+model CreditRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Int
+  type        String   // registration, daily_checkin, recharge, consume, refund, ai_usage
+  description String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model DailyCheckIn {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String   // YYYY-MM-DD 格式
+  credits   Int      @default(10)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@index([userId])
+}

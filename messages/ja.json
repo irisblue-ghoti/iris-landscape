@@ -10,6 +10,7 @@
     "title": "コードを共有する必要がある"
   },
   "common": {
+    "loading": "読み込み中...",
     "model": "モデル選択",
     "enterPrompt": "プロンプトを入力してください",
     "enterDuration": "動画の長さを選択してください",
@@ -1388,7 +1389,9 @@
       "process_time": "処理時間：",
       "model_used": "使用モデル：",
       "clear_filter": "フィルターをクリア",
-      "no_records_for_date": "この日付のレコードはありません"
+      "no_records_for_date": "この日付のレコードはありません",
+      "processing": "処理中...",
+      "failed": "処理に失敗しました"
     },
     "success": {
       "processed": "{name}の処理が完了しました",
@@ -1418,6 +1421,53 @@
       "download_failed": "ダウンロードに失敗しました",
       "expired_title": "共有期限切れ",
       "expired_message": "この共有リンクは期限切れです。共有者に再生成を依頼してください"
+    }
+  },
+  "user": {
+    "auth": {
+      "title": "ユーザーログイン",
+      "description": "メールとパスワードでログインまたは登録",
+      "email": "メールアドレス",
+      "password": "パスワード",
+      "name": "ユーザー名",
+      "email_placeholder": "メールアドレスを入力",
+      "password_placeholder": "パスワードを入力",
+      "name_placeholder": "ユーザー名を入力（任意）",
+      "login": "ログイン",
+      "register": "登録",
+      "switch_to_register": "アカウントをお持ちでない方は登録",
+      "switch_to_login": "既にアカウントをお持ちの方はログイン",
+      "use_account": "アカウントでログイン",
+      "use_code": "共有コードでログイン",
+      "login_failed": "ログインに失敗しました。メールとパスワードを確認してください",
+      "register_success": "登録に成功しました。ログインしてください",
+      "register_failed": "登録に失敗しました",
+      "logout": "ログアウト",
+      "guest": "ゲスト"
+    }
+  },
+  "credits": {
+    "balance": "クレジット残高",
+    "insufficient": "クレジット不足",
+    "required": "{amount}クレジットが必要",
+    "checkin": {
+      "title": "毎日チェックイン",
+      "description": "毎日チェックインで{amount}クレジットを獲得",
+      "button": "チェックイン",
+      "success": "チェックイン成功！{reward}クレジット獲得",
+      "already": "本日チェックイン済み",
+      "failed": "チェックイン失敗"
+    },
+    "history": {
+      "title": "クレジット履歴",
+      "type": {
+        "registration": "登録ボーナス",
+        "daily_checkin": "毎日チェックイン",
+        "recharge": "チャージ",
+        "consume": "消費",
+        "refund": "返金",
+        "ai_usage": "AI使用"
+      }
     }
   }
 }

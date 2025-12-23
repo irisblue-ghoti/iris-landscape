@@ -1,8 +1,2 @@
-export const models = [
-  "gpt-image-1",
-  "flux-kontext-pro",
-  "flux-kontext-max",
-  "gemini-2.5-flash-image-preview",
-];
-
-export const imageEditModels = ["seededit_v30"];
+// 水下照片增强模型
+export const underwaterEnhanceModel = "gemini-3-pro-image-preview";

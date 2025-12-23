@@ -40,9 +40,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// 格式化日期为 YYYY-MM-DD
+// 格式化日期为 YYYY-MM-DD（使用本地时间）
 function formatDateKey(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 // 格式化日期显示
@@ -262,13 +265,15 @@ export function EnhancementHistory() {
   // 渲染单个图片卡片
   const renderImageCard = (item: any) => {
     const isSuccess = item.image?.base64 && item.image.status === "success";
+    const isPending = item.image?.status === "pending";
+    const isFailed = item.image?.status === "failed";
     const isSelected = selectedIds.has(item.id);
 
     return (
       <Card
         key={item.id}
         className={cn(
-          "overflow-hidden group relative",
+          "group relative overflow-hidden",
           isSelectMode && isSuccess && "cursor-pointer",
           isSelected && "ring-2 ring-primary"
         )}
@@ -280,17 +285,38 @@ export function EnhancementHistory() {
       >
         {/* 选择模式下的复选框 */}
         {isSelectMode && isSuccess && (
-          <div className="absolute top-2 left-2 z-10">
+          <div className="absolute left-2 top-2 z-10">
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => toggleSelect(item.id)}
-              className="h-6 w-6 bg-white/80 border-2"
+              className="h-6 w-6 border-2 bg-white/80"
             />
           </div>
         )}
 
-        <div className="aspect-video relative">
-          {item.image.base64 && (
+        <div className="relative aspect-video">
+          {/* 处理中状态：显示加载动画 */}
+          {isPending && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted">
+              <Loader2 className="mb-2 h-10 w-10 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">
+                {t("underwater.history.processing")}
+              </p>
+            </div>
+          )}
+
+          {/* 失败状态：显示失败提示 */}
+          {isFailed && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted">
+              <X className="mb-2 h-10 w-10 text-destructive" />
+              <p className="text-sm text-destructive">
+                {t("underwater.history.failed")}
+              </p>
+            </div>
+          )}
+
+          {/* 成功状态：显示增强后的图片 */}
+          {isSuccess && item.image.base64 && (
             <Image
               src={item.image.base64}
               alt="增强后"
@@ -300,12 +326,13 @@ export function EnhancementHistory() {
               unoptimized
             />
           )}
+
           {/* 悬停时显示删除按钮（非选择模式） */}
           {!isSelectMode && (
             <Button
               variant="destructive"
               size="icon"
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+              className="absolute right-2 top-2 h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 handleDelete(item.id);
@@ -317,17 +344,14 @@ export function EnhancementHistory() {
 
           {/* 选中状态遮罩 */}
           {isSelectMode && isSelected && (
-            <div className="absolute inset-0 bg-primary/20 pointer-events-none" />
+            <div className="pointer-events-none absolute inset-0 bg-primary/20" />
           )}
         </div>
         <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {new Date(item.createdAt).toLocaleTimeString()}
             </p>
-            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
-              {item.image.model}
-            </span>
           </div>
 
           {/* 非选择模式下显示操作按钮 */}
@@ -341,11 +365,11 @@ export function EnhancementHistory() {
                     className="flex-1"
                     onClick={() => setSelectedImage(item)}
                   >
-                    <Eye className="h-4 w-4 mr-2" />
+                    <Eye className="mr-2 h-4 w-4" />
                     {t("underwater.history.view")}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       {t("underwater.history.compare_title")}
@@ -354,10 +378,10 @@ export function EnhancementHistory() {
                   {selectedImage && (
                     <div className="space-y-4">
                       <div>
-                        <p className="text-sm font-medium mb-2">
+                        <p className="mb-2 text-sm font-medium">
                           {t("underwater.history.enhanced")}
                         </p>
-                        <div className="relative w-full aspect-video rounded-lg overflow-hidden border">
+                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
                           <Image
                             src={selectedImage.image.base64}
                             alt="增强后"
@@ -368,18 +392,12 @@ export function EnhancementHistory() {
                           />
                         </div>
                       </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
+                      <div className="space-y-1 text-sm text-muted-foreground">
                         <p>
                           <span className="font-medium">
                             {t("underwater.history.process_time")}
                           </span>
                           {new Date(selectedImage.createdAt).toLocaleString()}
-                        </p>
-                        <p>
-                          <span className="font-medium">
-                            {t("underwater.history.model_used")}
-                          </span>
-                          {selectedImage.image.model}
                         </p>
                       </div>
                     </div>
@@ -392,7 +410,7 @@ export function EnhancementHistory() {
                   href={item.image.base64}
                   download={`underwater_enhanced_${item.id}.png`}
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="mr-2 h-4 w-4" />
                   {t("underwater.history.download")}
                 </a>
               </Button>
@@ -415,7 +433,7 @@ export function EnhancementHistory() {
   return (
     <div className="space-y-4">
       {/* 顶部操作栏 */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
           <h3 className="text-lg font-medium">
             {t("underwater.history.total", { count: filteredHistory.length })}
@@ -463,7 +481,7 @@ export function EnhancementHistory() {
           {/* 清除筛选按钮 */}
           {selectedDate && (
             <Button variant="ghost" size="sm" onClick={clearDateFilter}>
-              <X className="h-4 w-4 mr-1" />
+              <X className="mr-1 h-4 w-4" />
               {t("underwater.history.clear_filter")}
             </Button>
           )}
@@ -478,12 +496,12 @@ export function EnhancementHistory() {
             >
               {isSelectMode ? (
                 <>
-                  <X className="h-4 w-4 mr-2" />
+                  <X className="mr-2 h-4 w-4" />
                   {shareT("cancel_select")}
                 </>
               ) : (
                 <>
-                  <Check className="h-4 w-4 mr-2" />
+                  <Check className="mr-2 h-4 w-4" />
                   {shareT("select_share")}
                 </>
               )}
@@ -502,9 +520,9 @@ export function EnhancementHistory() {
               {selectedIds.size > 0 && (
                 <Button onClick={handleBatchShare} disabled={isSharing}>
                   {isSharing ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Share2 className="h-4 w-4 mr-2" />
+                    <Share2 className="mr-2 h-4 w-4" />
                   )}
                   {shareT("share_selected")} ({selectedIds.size})
                 </Button>
@@ -538,10 +556,11 @@ export function EnhancementHistory() {
                 key={dateKey}
                 open={!isCollapsed}
                 onOpenChange={() => toggleDateCollapse(dateKey)}
+                className="rounded-lg border bg-card p-4"
               >
-                <div className="flex items-center gap-2 mb-3">
+                <div className="mb-3 flex items-center gap-2">
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="p-1">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-1">
                       {isCollapsed ? (
                         <ChevronRight className="h-5 w-5" />
                       ) : (
@@ -549,11 +568,12 @@ export function EnhancementHistory() {
                       )}
                     </Button>
                   </CollapsibleTrigger>
-                  <h4 className="text-md font-medium text-muted-foreground">
+                  <CalendarIcon className="h-4 w-4 text-primary" />
+                  <h4 className="text-md font-semibold">
                     {formatDateDisplay(dateKey, t)}
                   </h4>
-                  <span className="text-sm text-muted-foreground">
-                    ({dateItems.length} {t("underwater.history.images")})
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-sm text-muted-foreground">
+                    {dateItems.length} {t("underwater.history.images")}
                   </span>
 
                   {/* 选择模式下显示日期全选按钮 */}
@@ -566,12 +586,12 @@ export function EnhancementHistory() {
                     >
                       {selectedCount === successDateItems.length ? (
                         <>
-                          <X className="h-4 w-4 mr-1" />
+                          <X className="mr-1 h-4 w-4" />
                           {shareT("deselect_all")}
                         </>
                       ) : (
                         <>
-                          <Check className="h-4 w-4 mr-1" />
+                          <Check className="mr-1 h-4 w-4" />
                           {shareT("select_all")}
                         </>
                       )}
@@ -580,7 +600,7 @@ export function EnhancementHistory() {
                 </div>
 
                 <CollapsibleContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {dateItems.map((item) => renderImageCard(item))}
                   </div>
                 </CollapsibleContent>
